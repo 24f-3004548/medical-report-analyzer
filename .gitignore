@@ -1,0 +1,5 @@
+node_modules/
+veris-backend/veris.db
+veris-backend/.env
+veris-backend/uploads/
+
