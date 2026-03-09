@@ -949,7 +949,7 @@ function AboutScreen({ setPage }) {
                 Ready to try it?
               </p>
               <p style={{ color: "var(--green)", fontSize: 14, opacity: 0.85 }}>
-                Upload your first report in seconds — no account needed.
+                Upload your first report in seconds.
               </p>
             </div>
             <button className="btn btn-primary" onClick={() => setPage("upload")}>
