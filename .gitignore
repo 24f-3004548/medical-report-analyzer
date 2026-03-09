@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env
+
+# Database
+*.db
+
+# Uploads / generated files
+uploads/
+
+# Node
+node_modules/
+dist/
+
+backend/.env
+backend/veris.db
+backend/uploads/
+backend/__pycache__/
