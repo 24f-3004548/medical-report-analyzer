@@ -1,26 +1,30 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import { api, ApiError } from "../services/api";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ password: "", confirm: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-
-  const token = searchParams.get("token");
-  const type = searchParams.get("type");
-  const email = searchParams.get("email");
+  const [resetToken, setResetToken] = useState("");
 
   useEffect(() => {
-    // Redirect if no token or not a password recovery link
-    if (!token || type !== "recovery" || !email) {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = hashParams.get("access_token") || searchParams.get("access_token");
+    const type = hashParams.get("type") || searchParams.get("type");
+
+    if (!token || type !== "recovery") {
       setError("Invalid or expired reset link. Please request a new one.");
+      return;
     }
-  }, [token, type, email]);
+
+    setResetToken(token);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,19 +43,14 @@ export default function ResetPassword() {
       return;
     }
 
-    if (!token) {
+    if (!resetToken) {
       setError("Reset token is missing. Please request a new password reset link.");
-      return;
-    }
-
-    if (!email) {
-      setError("Email is missing. Please request a new password reset link.");
       return;
     }
 
     setLoading(true);
     try {
-      await api.resetPassword(email, token, form.password);
+      await api.resetPassword(resetToken, form.password);
       setSuccess(true);
       setTimeout(() => {
         navigate("/login", { replace: true });
@@ -68,7 +67,7 @@ export default function ResetPassword() {
       hasError ? "border-critical" : "border-border"
     }`;
 
-  if (!token || type !== "recovery" || !email) {
+  if (error && !resetToken) {
     return (
       <div className="mx-auto max-w-content px-4 sm:px-6 lg:px-10 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-sm">

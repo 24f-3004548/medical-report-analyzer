@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.models.user import (
@@ -178,17 +180,14 @@ def logout(user=Depends(get_current_user)):
 def forgot_password(data: ForgotPasswordRequest):
 
     try:
-        supabase.auth.admin.reset_password_for_email(
-            data.email
+        frontend_url = os.getenv("FRONTEND_URL", "https://veris-medical.vercel.app")
+
+        supabase.auth.reset_password_for_email(
+            data.email,
+            {
+                "redirect_to": f"{frontend_url.rstrip('/')}/reset-password"
+            }
         )
-
-        return {
-            "message": "Password reset link sent to your email."
-        }
-
-    except Exception as e:
-
-        print(f"Password reset error: {str(e)}")
 
         return {
             "message": (
@@ -197,30 +196,29 @@ def forgot_password(data: ForgotPasswordRequest):
             )
         }
 
+    except Exception as e:
+
+        print(f"Password reset error: {str(e)}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error."
+        )
+
 
 # ============================================================
 # RESET PASSWORD
 # ============================================================
 
 @auth_router.post("/reset-password")
-def reset_password(data: ResetPasswordRequest):
+def reset_password(
+    data: ResetPasswordRequest,
+    user=Depends(get_current_user)
+):
 
     try:
-
-        response = supabase.auth.verify_otp({
-            "email": data.email,
-            "token": data.token,
-            "type": "recovery",
-        })
-
-        if not response.user:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid or expired reset token."
-            )
-
         supabase.auth.admin.update_user_by_id(
-            response.user.id,
+            user.id,
             {
                 "password": data.password
             }
@@ -272,9 +270,12 @@ def change_password(
 
     try:
 
-        supabase.auth.update_user({
-            "password": data.newPassword
-        })
+        supabase.auth.admin.update_user_by_id(
+            user.id,
+            {
+                "password": data.newPassword
+            }
+        )
 
         return {
             "message": "Password updated successfully."

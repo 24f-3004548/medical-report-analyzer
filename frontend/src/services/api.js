@@ -71,7 +71,12 @@ export const api = {
   register: (payload) => request("/auth/register", { method: "POST", body: payload }),
   logout: () => request("/auth/logout", { method: "POST" }),
   forgotPassword: (email) => request("/auth/forgot-password", { method: "POST", body: { email } }),
-  resetPassword: (email, token, password) => request("/auth/reset-password", { method: "POST", body: { email, token, password } }),
+  resetPassword: (token, password) =>
+    request("/auth/reset-password", {
+      method: "POST",
+      body: { password },
+      headers: { Authorization: `Bearer ${token}` },
+    }),
   changePassword: (payload) => request("/auth/change-password", { method: "POST", body: payload }),
 
   // Profile
