@@ -36,7 +36,7 @@ async function request(path, { method = "GET", body, headers, isFormData = false
       body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
     });
   } catch (err) {
-    throw new ApiError("We couldn't reach the server. Check your connection and try again.", 0, null);
+    throw new ApiError("Service unavailable. Please try again later.", 0, null);
   }
 
   if (res.status === 204) return null;
@@ -49,16 +49,16 @@ async function request(path, { method = "GET", body, headers, isFormData = false
 
   if (!res.ok) {
     const message =
-      data?.message ||
-      data?.error ||
-      data?.detail ||
-      (res.status === 401
-        ? "Your session has expired. Please sign in again."
-        : res.status === 404
-        ? "We couldn't find what you were looking for."
-        : res.status >= 500
-        ? "Something went wrong on our end. Please try again shortly."
-        : "Something went wrong. Please try again.");
+      res.status >= 500
+        ? "Internal server error."
+        : data?.message ||
+          data?.error ||
+          data?.detail ||
+          (res.status === 401
+            ? "Invalid email or password."
+            : res.status === 404
+            ? "We couldn't find what you were looking for."
+            : "Something went wrong. Please try again.");
     throw new ApiError(message, res.status, data);
   }
 

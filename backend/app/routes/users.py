@@ -104,10 +104,17 @@ def login(data: LoginRequest):
             "email": data.email,
             "password": data.password,
         })
-    except Exception:
+    except Exception as error:
+        status_code = getattr(error, "status", None) or getattr(error, "status_code", None)
+        if status_code in {400, 401}:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password."
+            )
+        print(f"Login service error: {error}")
         raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password."
+            status_code=500,
+            detail="Internal server error."
         )
 
     if not response.user or not response.session:
@@ -132,8 +139,12 @@ def login(data: LoginRequest):
             else {}
         )
 
-    except Exception:
-        user_profile = {}
+    except Exception as error:
+        print(f"Profile lookup error during login: {error}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error."
+        )
 
     return {
         "message": "Login successful.",
