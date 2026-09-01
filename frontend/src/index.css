@@ -1,0 +1,40 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,500;1,500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: #f9f8f6;
+  color: #1a1917;
+  font-family: "Inter", sans-serif;
+}
+
+::selection {
+  background-color: #eaf4ee;
+  color: #2d6a4f;
+}
+
+:focus-visible {
+  outline: 2px solid #2d6a4f;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

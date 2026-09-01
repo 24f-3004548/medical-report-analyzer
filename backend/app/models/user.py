@@ -2,6 +2,6 @@ from pydantic import BaseModel
 
 class UserProfile(BaseModel):
     name: str
-    age: int
+    date_of_birth: str
     location: str
     gender: str

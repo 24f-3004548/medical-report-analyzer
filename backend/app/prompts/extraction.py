@@ -26,6 +26,10 @@ For each test, extract:
 6. medical_topic
 7. interpretation_notes
 
+Also extract the report's test date as date_of_test only when it is
+explicitly stated. Preserve the date as printed. If it is not stated,
+return null.
+
 MEDICAL TOPIC:
 
 The medical_topic should describe the medical area, condition,
