@@ -11,8 +11,8 @@ function calculateAge(dateOfBirth) {
   return age >= 0 ? age : "";
 }
 
-export default function PatientCard({ name, dateOfBirth, gender }) {
-  const age = calculateAge(dateOfBirth);
+export default function PatientCard({ name, age: reportedAge, dateOfBirth, gender }) {
+  const age = reportedAge || calculateAge(dateOfBirth);
   if (!name && !dateOfBirth && !gender) return null;
 
   return (

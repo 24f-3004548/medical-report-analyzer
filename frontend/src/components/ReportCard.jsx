@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import ResultStatus from "./ResultStatus";
 
 const PROCESSING_TONE = {
   Processing: "bg-yellow-50 text-yellow-700 border-yellow-200",
@@ -34,7 +33,10 @@ function calculateAge(dateOfBirth) {
 }
 
 export default function ReportCard({ report, patientName }) {
-  const { id, name, reportType, date, status, extracted_data: extractedData } = report;
+  const { id, status, extracted_data: extractedData } = report;
+  const name = report.name ?? report.file_name;
+  const reportType = report.reportType ?? report.report_type;
+  const date = report.date ?? extractedData?.date_of_test ?? extractedData?.dateOfTest ?? report.created_at;
   const patientDateOfBirth = extractedData?.patient_date_of_birth ?? extractedData?.patientDateOfBirth;
   const patientGender = extractedData?.patient_gender ?? extractedData?.patientGender;
   const patientAge = calculateAge(patientDateOfBirth);

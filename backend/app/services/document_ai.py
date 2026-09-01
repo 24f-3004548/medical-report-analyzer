@@ -32,6 +32,7 @@ def extract_text(file_bytes: bytes, mime_type: str) -> str:
         raw_document=raw_document
     )
     result = client.process_document(
-        request=request
+        request=request,
+        timeout=60,
     )
     return result.document.text

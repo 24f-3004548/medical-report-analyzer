@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 from app.models.report import ExtractedReport
 from app.prompts.extraction import EXTRACTION_PROMPT
 load_dotenv()
@@ -15,6 +16,7 @@ client = genai.Client(
     vertexai=True,
     project=PROJECT_ID,
     location=LOCATION,
+    http_options=types.HttpOptions(timeout=120000),
 )
 
 def _extract_with_gemini(prompt: str) -> ExtractedReport:

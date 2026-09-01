@@ -32,6 +32,12 @@ IMPORTANT RULES:
 - If the available information is insufficient to determine the
   result status, use "cannot_determine".
 - Do not make a diagnosis from an abnormal or positive result.
+- You may identify a potential condition for clinician discussion only when
+  the supplied report findings and medical knowledge support a clear,
+  medically relevant possibility. This is not a diagnosis.
+- Never infer a disease from one mildly abnormal, nonspecific, or isolated
+  result unless the supplied medical knowledge explicitly supports that link.
+- Never use the patient's name, age, or gender alone as evidence for a disease.
 - If the report describes a test as a screening test, preserve that
   limitation.
 - If the report states that confirmation or clinical correlation
@@ -233,6 +239,32 @@ The summary must:
   patient context, or medical knowledge.
 - Do not simply label the patient as having or not having a disease
   based only on laboratory results.
+
+POTENTIAL CONDITIONS FOR CLINICIAN DISCUSSION:
+
+Return a `potential_conditions` array for medically relevant possibilities
+that a qualified clinician may want to consider based on the supplied report
+and medical knowledge.
+
+For every item, provide:
+
+- `name`: the possible condition or clinical concern, stated as a possibility
+- `supporting_findings`: the exact test names and findings from this report
+  that support raising the possibility
+- `caveat`: a short statement that laboratory findings alone do not establish
+  the condition and that clinical assessment or confirmation may be needed
+
+Strict rules:
+
+- This array is not a diagnosis list.
+- Do not state or imply that the patient has any condition.
+- Do not include a condition unless the report findings and supplied medical
+  knowledge provide a reasonable basis for mentioning it.
+- Do not invent symptoms, history, examination findings, confirmatory tests,
+  or risk factors.
+- Do not treat a normal result as evidence of disease.
+- If no medically relevant possibility is supported, return `[]`.
+- Prefer a short list of high-signal possibilities over a broad differential.
 
 WHEN TO DISCUSS WITH A DOCTOR:
 

@@ -1,4 +1,3 @@
-import time
 from functools import lru_cache
 import xml.etree.ElementTree as ET
 import requests
@@ -106,8 +105,19 @@ def get_medical_knowledge(extracted_data: dict) -> list[dict]:
         topic_map[medical_topic].append(test_name)
     knowledge = []
     for topic, test_names in topic_map.items():
-        time.sleep(0.5)
-        search_result = fetch_medlineplus(topic)
+        try:
+            search_result = fetch_medlineplus(topic)
+        except requests.RequestException:
+            knowledge.append({
+                "topic": topic,
+                "tests": test_names,
+                "source": None,
+                "found": False,
+                "title": None,
+                "url": None,
+                "summary": None,
+            })
+            continue
         best_result = select_best_result(
             topic,
             search_result["results"]

@@ -87,12 +87,21 @@ If no test-specific interpretation notes are provided, return [].
 
 PATIENT INFORMATION:
 
+These fields are important and must be returned whenever the exact value is
+visible anywhere in the report, including the header, demographics block,
+or patient information section. Search the entire report before returning.
+
+Extract the patient's full name only when explicitly printed in the report.
+Return it as patient_name. Never infer it from an email address or filename.
+
 Extract the patient's age and gender/sex ONLY if explicitly stated
 in the report.
 
 - Do not infer gender or sex from the patient's name.
 - Do not infer age from dates.
 - If age is explicitly stated, preserve the reported value.
+- Return an explicitly printed age as patient_age, preserving its unit or
+  wording where present. Do not calculate age from a date of birth.
 - If gender/sex is explicitly stated, preserve it as reported.
 - If either is not explicitly stated, return null.
 

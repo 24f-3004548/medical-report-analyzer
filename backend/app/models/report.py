@@ -17,6 +17,8 @@ class ExtractedReport(BaseModel):
     
     report_type: str | None = Field(None, alias="reportType")
     date_of_test: str | None = Field(None, alias="dateOfTest")
+    patient_name: str | None = Field(None, alias="patientName")
+    patient_age: str | None = Field(None, alias="patientAge")
     patient_date_of_birth: str | None = Field(None, alias="patientDateOfBirth")
     patient_gender: str | None = Field(None, alias="patientGender")
     tests: list[TestResult]
@@ -44,9 +46,17 @@ class TestInterpretation(BaseModel):
     explanation: str
     caution: str | None = None
 
+class PotentialCondition(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str
+    supporting_findings: list[str] = Field(default_factory=list, alias="supportingFindings")
+    caveat: str
+
 class MedicalInterpretation(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     
     interpretations: list[TestInterpretation]
     overall_summary: str = Field(alias="overallSummary")
     when_to_discuss_with_doctor: str = Field(alias="whenToDiscussWithDoctor")
+    potential_conditions: list[PotentialCondition] = Field(default_factory=list, alias="potentialConditions")

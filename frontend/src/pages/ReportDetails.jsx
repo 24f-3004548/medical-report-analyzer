@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
-import PatientCard from "../components/PatientCard";
 import SummaryCard from "../components/SummaryCard";
 import ResultCard from "../components/ResultCard";
 import SourceCard from "../components/SourceCard";
+import PotentialConditionsCard from "../components/PotentialConditionsCard";
 import { api, ApiError } from "../services/api";
+import ChatAssistant from "../components/ChatAssistant";
 import { useAuth } from "../context/AuthContext";
+
+const REPORT_TABS = ["overview", "results", "sources"];
+
+function getReportTab() {
+  const tab = window.location.hash.slice(1);
+  return REPORT_TABS.includes(tab) ? tab : "overview";
+}
 
 function formatDate(dateString) {
   if (!dateString) return "";
@@ -14,6 +23,46 @@ function formatDate(dateString) {
   } catch {
     return dateString;
   }
+}
+
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return "";
+  const birthDate = new Date(dateOfBirth);
+  if (Number.isNaN(birthDate.getTime())) return "";
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  if (today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) age -= 1;
+  return age >= 0 ? age : "";
+}
+
+function formatPatientName(name) {
+  if (!name) return "";
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\b(mr|mrs|ms|dr)\.(?=\S)/i, "$1. ")
+    .replace(/(^|[\s-])([a-z])/g, (_, prefix, letter) => `${prefix}${letter.toUpperCase()}`);
+}
+
+function formatAge(age) {
+  const years = String(age ?? "").match(/\d+/)?.[0];
+  return years ? `${years} years` : "";
+}
+
+function formatGender(gender) {
+  const normalized = String(gender ?? "").trim().toLowerCase();
+  if (normalized === "m" || normalized === "male") return "Male";
+  if (normalized === "f" || normalized === "female") return "Female";
+  return gender || "";
+}
+
+function formatDateOfBirth(dateOfBirth) {
+  const isoDate = String(dateOfBirth ?? "").match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (isoDate) return `${isoDate[3]}/${isoDate[2]}/${isoDate[1]}`;
+
+  const parsedDate = new Date(dateOfBirth);
+  if (Number.isNaN(parsedDate.getTime())) return "";
+  return parsedDate.toLocaleDateString("en-GB");
 }
 
 function normalizeInterpretation(report) {
@@ -50,6 +99,8 @@ function normalizeInterpretation(report) {
     reportType: report.report_type ?? report.reportType,
     date: report.created_at ?? report.date,
     dateOfTest,
+    patientName: extractedData.patient_name ?? extractedData.patientName,
+    patientAge: extractedData.patient_age ?? extractedData.patientAge,
     status: report.status
       ? report.status.charAt(0).toUpperCase() + report.status.slice(1).toLowerCase()
       : report.status,
@@ -59,6 +110,11 @@ function normalizeInterpretation(report) {
     resultsByTopic,
     whenToDiscussWithDoctor:
       interpretation.when_to_discuss_with_doctor ?? interpretation.whenToDiscussWithDoctor,
+    potentialConditions: (interpretation.potential_conditions ?? interpretation.potentialConditions ?? []).map((condition) => ({
+      name: condition.name,
+      supportingFindings: condition.supporting_findings ?? condition.supportingFindings ?? [],
+      caveat: condition.caveat,
+    })),
     sources: report.sources || [],
   };
 }
@@ -72,6 +128,13 @@ export default function ReportDetails() {
   const [renameValue, setRenameValue] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [activeTab, setActiveTab] = useState(getReportTab);
+
+  useEffect(() => {
+    const syncTabWithHash = () => setActiveTab(getReportTab());
+    window.addEventListener("hashchange", syncTabWithHash);
+    return () => window.removeEventListener("hashchange", syncTabWithHash);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,6 +188,18 @@ export default function ReportDetails() {
     } catch (error) {
       setActionError(error.message);
     }
+  };
+
+  const openRenameDialog = () => {
+    setActionError("");
+    setRenameValue(fileName || "");
+    setIsRenaming(true);
+  };
+
+  const closeRenameDialog = () => {
+    setActionError("");
+    setRenameValue("");
+    setIsRenaming(false);
   };
 
   const handleDelete = async () => {
@@ -188,16 +263,34 @@ export default function ReportDetails() {
     status,
     file_name: fileName,
     patientDateOfBirth,
+    patientName,
+    patientAge,
     patientGender,
     summary,
     resultsByTopic = {},
+    potentialConditions = [],
     whenToDiscussWithDoctor,
     sources = [],
   } = report;
+  const profileName = user?.fullName || user?.name;
+  const profileDateOfBirth = user?.dateOfBirth || user?.date_of_birth || user?.dob;
+  const displayPatientName = formatPatientName(patientName || profileName);
+  const displayPatientAge = formatAge(patientAge || calculateAge(patientDateOfBirth || profileDateOfBirth));
+  const displayPatientGender = formatGender(patientGender || user?.gender);
+  const displayPatientDateOfBirth = formatDateOfBirth(patientDateOfBirth || profileDateOfBirth);
+  const displayTestDate = dateOfTest || formatDate(date);
+  const selectTab = (tab) => {
+    setActiveTab(tab);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${tab}`);
+  };
+  const tabClassName = (tab) =>
+    `px-1 pb-3 ${activeTab === tab ? "border-b-2 border-forest text-forest" : "hover:text-ink"}`;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Link to="/reports" className="inline-flex items-center gap-1.5 text-body-sm font-medium text-forest hover:underline mb-6">
+    <div className="mx-auto max-w-[960px] animate-fade-in">
+      <div className="flex flex-wrap items-end justify-between gap-5">
+        <div>
+          <Link to="/reports" className="inline-flex items-center gap-1.5 text-body-sm font-medium text-forest hover:underline">
         <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path
             fillRule="evenodd"
@@ -206,12 +299,23 @@ export default function ReportDetails() {
           />
         </svg>
         Back to reports
-      </Link>
+          </Link>
+          <h1 className="mt-5 font-display text-h1 text-ink">{reportType || "Lab report"}</h1>
+          <p className="mt-1 text-body-sm text-muted">Test date: {displayTestDate || "Not available"}{report.file_name ? ` · ${report.file_name}` : ""}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={openRenameDialog} className="rounded-btn border border-border bg-white px-3 py-2 text-body-sm font-medium text-ink hover:border-forest">Rename PDF</button>
+          <button type="button" onClick={handleDownload} disabled={isDownloading} className="rounded-btn border border-border bg-white px-3 py-2 text-body-sm font-medium text-ink hover:border-forest disabled:opacity-50">{isDownloading ? "Downloading..." : "Download PDF"}</button>
+          <button type="button" onClick={handleDelete} className="rounded-btn border border-critical/30 bg-white px-3 py-2 text-body-sm font-medium text-critical hover:bg-critical-bg">Delete</button>
+        </div>
+      </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-card border border-border bg-white p-4">
-        <div>
-          <h1 className="font-display text-h2 text-ink">{reportType || "Lab report"}</h1>
-          <p className="mt-2 text-body text-muted">Test date: {dateOfTest || formatDate(date) || "Not available"}</p>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          {displayPatientName && <div><p className="text-label text-muted">Patient</p><p className="mt-1 text-body font-medium text-ink">{displayPatientName}</p></div>}
+          {displayPatientAge && <div><p className="text-label text-muted">Age</p><p className="mt-1 text-body font-medium text-ink">{displayPatientAge}</p></div>}
+          {displayPatientGender && <div><p className="text-label text-muted">Gender</p><p className="mt-1 text-body font-medium text-ink">{displayPatientGender}</p></div>}
+          {displayPatientDateOfBirth && <div><p className="text-label text-muted">Date of birth</p><p className="mt-1 text-body font-medium text-ink">{displayPatientDateOfBirth}</p></div>}
         </div>
         {status && (
           <span className={`rounded-tag border px-3 py-1.5 text-body-sm font-medium whitespace-nowrap ${
@@ -224,74 +328,87 @@ export default function ReportDetails() {
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={handleDownload} disabled={isDownloading} className="rounded-btn border border-forest px-3 py-2 text-body-sm font-medium text-forest hover:bg-forest-light disabled:opacity-50">
-          {isDownloading ? "Downloading..." : "Download original PDF"}
-        </button>
-        <button type="button" onClick={() => setIsRenaming((current) => !current)} className="rounded-btn border border-border px-3 py-2 text-body-sm font-medium text-ink hover:bg-page">
-          Rename PDF
-        </button>
-        <button type="button" onClick={handleDelete} className="rounded-btn border border-critical/40 px-3 py-2 text-body-sm font-medium text-critical hover:bg-critical-bg">
-          Delete report
-        </button>
-      </div>
+      <nav className="mt-7 flex gap-6 border-b border-border text-body-sm font-medium text-muted" aria-label="Report sections">
+        <button type="button" onClick={() => selectTab("overview")} className={tabClassName("overview")} aria-current={activeTab === "overview" ? "page" : undefined}>Overview</button>
+        <button type="button" onClick={() => selectTab("results")} className={tabClassName("results")} aria-current={activeTab === "results" ? "page" : undefined}>Results</button>
+        <button type="button" onClick={() => selectTab("sources")} className={tabClassName("sources")} aria-current={activeTab === "sources" ? "page" : undefined}>Sources</button>
+      </nav>
 
-      {isRenaming && (
-        <form onSubmit={handleRename} className="mt-3 flex max-w-lg gap-2">
-          <input
-            value={renameValue}
-            onChange={(event) => setRenameValue(event.target.value)}
-            placeholder={fileName || "New filename"}
-            className="min-w-0 flex-1 rounded-btn border border-border bg-white px-3 py-2 text-body text-ink focus:border-forest focus:outline-none"
-            aria-label="New PDF filename"
-          />
-          <button type="submit" className="rounded-btn bg-forest px-3 py-2 text-body-sm font-medium text-white">Save</button>
-        </form>
-      )}
+      {actionError && !isRenaming && <p className="mt-3 text-body-sm text-critical" role="alert">{actionError}</p>}
 
-      {actionError && <p className="mt-3 text-body-sm text-critical" role="alert">{actionError}</p>}
-
-      {(user?.fullName || patientDateOfBirth || patientGender) && (
-        <div className="mt-5">
-          <PatientCard name={user?.fullName} dateOfBirth={patientDateOfBirth} gender={patientGender} />
-        </div>
-      )}
-
-      {summary && (
-        <div className="mt-6">
-          <SummaryCard summary={summary} />
-        </div>
-      )}
-
-      {Object.entries(resultsByTopic).map(([topic, results]) => (
-        <section key={topic} className="mt-10">
-          <h2 className="font-body font-semibold text-h3 text-ink uppercase tracking-wide">{topic}</h2>
-          <div className="mt-4 space-y-4">
-            {results.map((result) => (
-              <ResultCard key={result.testName} result={result} />
-            ))}
-          </div>
-        </section>
-      ))}
-
-      {whenToDiscussWithDoctor && (
-        <section className="mt-10">
-          <div className="rounded-card border border-warning/30 bg-warning-bg p-6">
-            <h2 className="font-body font-semibold text-body-lg text-ink">When to discuss with your doctor</h2>
-            <p className="mt-2 text-body text-ink">{whenToDiscussWithDoctor}</p>
-          </div>
+      {activeTab === "overview" && (
+        <section className="mt-6">
+          {summary && <SummaryCard summary={summary} />}
+          <PotentialConditionsCard conditions={potentialConditions} />
+          {whenToDiscussWithDoctor && (
+            <div className="mt-10 rounded-card border border-warning/30 bg-warning-bg p-6">
+              <h2 className="font-body font-semibold text-body-lg text-ink">When to discuss with your doctor</h2>
+              <p className="mt-2 text-body text-ink">{whenToDiscussWithDoctor}</p>
+            </div>
+          )}
+          <ChatAssistant reportId={id} />
         </section>
       )}
 
-      {sources.length > 0 && (
-        <section className="mt-10 mb-4">
+      {activeTab === "results" && (
+        <section className="mt-6">
+          {Object.entries(resultsByTopic).map(([topic, results]) => (
+            <div key={topic} className="mt-10 first:mt-0">
+              <h2 className="font-body font-semibold text-h3 text-ink uppercase tracking-wide">{topic}</h2>
+              <div className="mt-4 space-y-4">
+                {results.map((result) => <ResultCard key={result.testName} result={result} />)}
+              </div>
+            </div>
+          ))}
+          {Object.keys(resultsByTopic).length === 0 && <p className="text-body text-muted">No results are available for this report.</p>}
+        </section>
+      )}
+
+      {activeTab === "sources" && (
+        <section className="mt-6 mb-4">
           <h2 className="font-body font-semibold text-h3 text-ink">Medical information sources</h2>
-          <div className="mt-4 space-y-3">
-            {sources.map((source, i) => (
-              <SourceCard key={source.url || i} source={source} />
-            ))}
-          </div>
+          {sources.length > 0 ? (
+            <div className="mt-4 space-y-3">
+              {sources.map((source, i) => <SourceCard key={source.url || i} source={source} />)}
+            </div>
+          ) : <p className="mt-4 text-body text-muted">No medical information sources are available for this report.</p>}
         </section>
+      )}
+
+      {isRenaming && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4" role="presentation" onMouseDown={closeRenameDialog}>
+          <form
+            onSubmit={handleRename}
+            onMouseDown={(event) => event.stopPropagation()}
+            className="w-full max-w-md rounded-card border border-border bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-report-title"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="rename-report-title" className="font-display text-h3 text-ink">Rename PDF</h2>
+                <p className="mt-1 text-body-sm text-muted">Choose a clear name for this report file.</p>
+              </div>
+              <button type="button" onClick={closeRenameDialog} className="text-body-sm font-medium text-muted hover:text-ink" aria-label="Close rename dialog">Close</button>
+            </div>
+            <label htmlFor="report-file-name" className="mt-5 block text-label font-medium uppercase tracking-wide text-muted">File name</label>
+            <input
+              id="report-file-name"
+              value={renameValue}
+              onChange={(event) => setRenameValue(event.target.value)}
+              className="mt-2 w-full rounded-btn border border-border bg-white px-3 py-2 text-body text-ink focus:border-forest focus:outline-none"
+              aria-describedby={actionError ? "rename-error" : undefined}
+              autoFocus
+            />
+            {actionError && <p id="rename-error" className="mt-2 text-body-sm text-critical" role="alert">{actionError}</p>}
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={closeRenameDialog} className="rounded-btn border border-border px-4 py-2 text-body-sm font-medium text-ink hover:bg-page">Cancel</button>
+              <button type="submit" className="rounded-btn bg-forest px-4 py-2 text-body-sm font-medium text-white hover:bg-forest/90">Save changes</button>
+            </div>
+          </form>
+        </div>,
+        document.body
       )}
     </div>
   );

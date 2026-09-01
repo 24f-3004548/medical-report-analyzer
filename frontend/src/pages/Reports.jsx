@@ -35,19 +35,25 @@ export default function Reports() {
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .getReports()
+    const loadReports = () => api.getReports()
       .then((data) => {
-        if (!cancelled) {
-          setReports((data?.reports || data || []).map(normalizeReport));
-          setState("success");
+        if (cancelled) return;
+        const nextReports = (data?.reports || data || []).map(normalizeReport);
+        setReports(nextReports);
+        setState("success");
+        if (uploadingFile && nextReports.some((report) => report.name === uploadingFile && ["Completed", "Failed"].includes(report.status))) {
+          setUploadingFile(null);
         }
       })
       .catch(() => !cancelled && setState("error"));
+
+    loadReports();
+    const interval = window.setInterval(loadReports, 5000);
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
-  }, []);
+  }, [uploadingFile]);
 
   const filtered = useMemo(() => {
     return reports.filter((r) => {

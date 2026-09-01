@@ -12,7 +12,7 @@ export default function Navbar() {
         <nav className="flex items-center gap-2 sm:gap-4">
           <Link
             to="/login"
-            className="hidden sm:inline text-body font-medium text-ink hover:text-forest transition-colors duration-150"
+            className="inline text-body-sm sm:text-body font-medium text-ink hover:text-forest transition-colors duration-150"
           >
             Sign in
           </Link>

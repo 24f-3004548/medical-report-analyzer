@@ -1,3 +1,4 @@
+import traceback
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from pydantic import BaseModel, Field
 from app.models.report import ExtractedReport
@@ -40,9 +41,9 @@ def _pdf_name(file_name: str) -> str:
         raise HTTPException(status_code=400, detail="Enter a valid PDF filename.")
     return name
 
-@router.post("/upload", response_model=ExtractedReport)
+@router.post("/upload")
 def upload_report(file: UploadFile = File(...),user=Depends(get_current_user)):
-    if file.content_type != "application/pdf":
+    if file.content_type not in {None, "", "application/pdf"}:
         raise HTTPException(
             status_code=400,
             detail="Only PDF files are supported."
@@ -54,7 +55,9 @@ def upload_report(file: UploadFile = File(...),user=Depends(get_current_user)):
             detail="The uploaded file is empty."
         )
     file_path = f"{user.id}/{file.filename}"
+    report_id = None
     try:
+        stage = "uploading original PDF"
         supabase.storage.from_("reports").upload(
             file_path,
             file_bytes,
@@ -63,12 +66,25 @@ def upload_report(file: UploadFile = File(...),user=Depends(get_current_user)):
                 "upsert": "true"
             }
         )
+        stage = "creating processing record"
+        pending = supabase.table("reports").insert({
+            "user_id": user.id,
+            "file_name": file.filename,
+            "file_path": file_path,
+            "status": "Processing",
+        }).execute()
+        if not pending.data:
+            raise Exception("Report could not be queued for processing.")
+        report_id = pending.data[0]["id"]
         raw_text = extract_text(
             file_bytes,
             "application/pdf"
         )
+        stage = "extracting text with Document AI"
         extracted_report = extract_medical_results(raw_text)
+        stage = "retrieving medical information"
         knowledge = get_medical_knowledge(extracted_report.model_dump())
+        stage = "generating explanations"
         interpretation = interpret_medical_results(
             extracted_report.model_dump(),
             knowledge
@@ -96,16 +112,25 @@ def upload_report(file: UploadFile = File(...),user=Depends(get_current_user)):
         response = (
             supabase
             .table("reports")
-            .insert(report_data)
+            .update(report_data)
+            .eq("id", report_id)
+            .eq("user_id", user.id)
             .execute()
         )
         if not response.data:
             raise Exception("Report was not saved to database.")
-        return extracted_report
+        return {"id": report_id, **extracted_report.model_dump()}
     except Exception as e:
+        print(f"Report {report_id or file.filename} failed during {stage}: {e}")
+        traceback.print_exc()
+        if report_id:
+            try:
+                supabase.table("reports").update({"status": "Failed"}).eq("id", report_id).eq("user_id", user.id).execute()
+            except Exception as status_error:
+                print(f"Could not mark report {report_id} as Failed: {status_error}")
         raise HTTPException(
             status_code=500,
-            detail=f"Report processing failed: {str(e)}"
+            detail=f"Report processing failed during {stage}."
         )
 
 @router.get("")
