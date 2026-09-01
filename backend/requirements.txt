@@ -3,4 +3,10 @@ uvicorn[standard]
 bcrypt==4.0.1
 python-multipart
 python-dotenv
+email-validator
 google-genai
+supabase
+google-cloud-documentai
+google-api-core
+beautifulsoup4
+requests

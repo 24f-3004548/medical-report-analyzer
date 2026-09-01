@@ -11,15 +11,10 @@ const STATUS_FILTERS = ["All", "Processing", "Completed", "Failed"];
 const ITEMS_PER_PAGE = 10;
 
 function normalizeReport(report) {
-  const extractedData = report.extracted_data || report.extractedData || {};
   return {
     ...report,
-    id: report.id,
-    name: report.name ?? report.file_name,
-    reportType: report.reportType ?? report.report_type,
-    date: report.date ?? extractedData.date_of_test ?? extractedData.dateOfTest ?? report.created_at,
+    date: report.date ?? report.extractedData?.dateOfTest ?? report.createdAt,
     status: report.status ? report.status.charAt(0).toUpperCase() + report.status.slice(1).toLowerCase() : report.status,
-    extracted_data: extractedData,
   };
 }
 
@@ -41,7 +36,7 @@ export default function Reports() {
         const nextReports = (data?.reports || data || []).map(normalizeReport);
         setReports(nextReports);
         setState("success");
-        if (uploadingFile && nextReports.some((report) => report.name === uploadingFile && ["Completed", "Failed"].includes(report.status))) {
+        if (uploadingFile && nextReports.some((report) => report.fileName === uploadingFile && ["Completed", "Failed"].includes(report.status))) {
           setUploadingFile(null);
         }
       })
@@ -60,7 +55,7 @@ export default function Reports() {
       const matchesStatus = statusFilter === "All" || r.status?.toLowerCase() === statusFilter?.toLowerCase();
       const matchesSearch =
         !search.trim() ||
-        r.name?.toLowerCase().includes(search.toLowerCase()) ||
+        r.fileName?.toLowerCase().includes(search.toLowerCase()) ||
         r.reportType?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
     });

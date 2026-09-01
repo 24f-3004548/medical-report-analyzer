@@ -8,6 +8,7 @@ from app.services.supabase import supabase
 from app.services.auth import get_current_user
 from app.services.knowledge import get_medical_knowledge
 from app.services.interpreter import interpret_medical_results
+from app.services.serialization import serialize_api
 
 router = APIRouter(
     prefix="/reports",
@@ -16,7 +17,7 @@ router = APIRouter(
 
 
 class RenameReportRequest(BaseModel):
-    file_name: str = Field(min_length=1, max_length=255)
+    file_name: str = Field(min_length=1, max_length=255, validation_alias="fileName")
 
 
 def _get_report(report_id: str, user_id: str):
@@ -119,7 +120,7 @@ def upload_report(file: UploadFile = File(...),user=Depends(get_current_user)):
         )
         if not response.data:
             raise Exception("Report was not saved to database.")
-        return {"id": report_id, **extracted_report.model_dump()}
+        return serialize_api({"id": report_id, **extracted_report.model_dump()})
     except Exception as e:
         print(f"Report {report_id or file.filename} failed during {stage}: {e}")
         traceback.print_exc()
@@ -146,7 +147,7 @@ async def get_reports(user=Depends(get_current_user)):
             .order("created_at", desc=True)
             .execute()
         )
-        return response.data
+        return serialize_api(response.data)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -185,7 +186,7 @@ def rename_report(report_id: str, data: RenameReportRequest, user=Depends(get_cu
             .eq("user_id", user.id)
             .execute()
         )
-        return response.data[0] if response.data else {"file_name": new_name}
+        return serialize_api(response.data[0] if response.data else {"file_name": new_name})
     except HTTPException:
         raise
     except Exception as e:
@@ -220,7 +221,7 @@ async def get_report(report_id: str,user=Depends(get_current_user)):
                 status_code=404,
                 detail="Report not found."
             )
-        return response.data
+        return serialize_api(response.data)
     except HTTPException:
         raise
     except Exception as e:

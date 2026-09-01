@@ -93,10 +93,10 @@ export const api = {
     return res.blob();
   },
   renameReport: (id, fileName) =>
-    request(`/reports/${id}/name`, { method: "PATCH", body: { file_name: fileName } }),
+    request(`/reports/${id}/name`, { method: "PATCH", body: { fileName } }),
   deleteReport: (id) => request(`/reports/${id}`, { method: "DELETE" }),
   chat: (message, reportId) =>
-    request("/chat", { method: "POST", body: { message, ...(reportId ? { report_id: reportId } : {}) } }),
+    request("/chat", { method: "POST", body: { message, ...(reportId ? { reportId } : {}) } }),
   uploadReport: (formData) => request("/reports/upload", { method: "POST", body: formData, isFormData: true }),
 };
 

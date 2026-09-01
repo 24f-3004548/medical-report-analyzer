@@ -33,19 +33,18 @@ function calculateAge(dateOfBirth) {
 }
 
 export default function ReportCard({ report, patientName }) {
-  const { id, status, extracted_data: extractedData } = report;
-  const name = report.name ?? report.file_name;
-  const reportType = report.reportType ?? report.report_type;
-  const date = report.date ?? extractedData?.date_of_test ?? extractedData?.dateOfTest ?? report.created_at;
-  const patientDateOfBirth = extractedData?.patient_date_of_birth ?? extractedData?.patientDateOfBirth;
-  const patientGender = extractedData?.patient_gender ?? extractedData?.patientGender;
+  const { id, status, extractedData } = report;
+  const { fileName, reportType, createdAt } = report;
+  const date = report.date ?? extractedData?.dateOfTest ?? createdAt;
+  const patientDateOfBirth = extractedData?.patientDateOfBirth;
+  const patientGender = extractedData?.patientGender;
   const patientAge = calculateAge(patientDateOfBirth);
   const statusClass = PROCESSING_TONE[status] || "bg-[#F1F0EE] text-muted";
 
   return (
     <div className="flex items-center justify-between gap-4 rounded-card border border-border bg-white p-4 sm:p-5 hover:border-forest/30 transition-colors">
       <div className="min-w-0 flex-1">
-        <p className="font-body font-medium text-body-lg text-ink truncate">{name || reportType}</p>
+        <p className="font-body font-medium text-body-lg text-ink truncate">{fileName || reportType}</p>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-muted">
           {reportType && <span>{reportType}</span>}
           {date && <span>{formatDate(date)}</span>}

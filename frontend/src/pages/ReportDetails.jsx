@@ -66,18 +66,18 @@ function formatDateOfBirth(dateOfBirth) {
 }
 
 function normalizeInterpretation(report) {
-  const extractedData = report.extracted_data || report.extractedData || {};
+  const extractedData = report.extractedData || {};
   const interpretation = report.interpretation || {};
   const interpretations = interpretation.interpretations || [];
-  const dateOfTest = extractedData.date_of_test ?? extractedData.dateOfTest;
+  const dateOfTest = extractedData.dateOfTest;
   const resultsByTopic = interpretations.reduce((groups, item) => {
-    const topic = item.medical_topic ?? item.medicalTopic ?? "Other results";
+    const topic = item.medicalTopic ?? "Other results";
     const result = {
-      testName: item.test_name ?? item.testName,
+      testName: item.testName,
       value: item.result,
       unit: item.unit,
-      referenceRange: item.reference_range ?? item.referenceRange,
-      status: item.result_status ?? item.resultStatus,
+      referenceRange: item.referenceRange,
+      status: item.resultStatus,
       meaning: item.meaning,
       explanation: item.explanation,
       caution: item.caution,
@@ -96,23 +96,23 @@ function normalizeInterpretation(report) {
 
   return {
     ...report,
-    reportType: report.report_type ?? report.reportType,
-    date: report.created_at ?? report.date,
+    reportType: report.reportType,
+    date: report.createdAt ?? report.date,
     dateOfTest,
-    patientName: extractedData.patient_name ?? extractedData.patientName,
-    patientAge: extractedData.patient_age ?? extractedData.patientAge,
+    patientName: extractedData.patientName,
+    patientAge: extractedData.patientAge,
     status: report.status
       ? report.status.charAt(0).toUpperCase() + report.status.slice(1).toLowerCase()
       : report.status,
-    patientDateOfBirth: extractedData.patient_date_of_birth ?? extractedData.patientDateOfBirth,
-    patientGender: extractedData.patient_gender ?? extractedData.patientGender,
-    summary: interpretation.overall_summary ?? interpretation.overallSummary,
+    patientDateOfBirth: extractedData.patientDateOfBirth,
+    patientGender: extractedData.patientGender,
+    summary: interpretation.overallSummary,
     resultsByTopic,
     whenToDiscussWithDoctor:
-      interpretation.when_to_discuss_with_doctor ?? interpretation.whenToDiscussWithDoctor,
-    potentialConditions: (interpretation.potential_conditions ?? interpretation.potentialConditions ?? []).map((condition) => ({
+      interpretation.whenToDiscussWithDoctor,
+    potentialConditions: (interpretation.potentialConditions ?? []).map((condition) => ({
       name: condition.name,
-      supportingFindings: condition.supporting_findings ?? condition.supportingFindings ?? [],
+      supportingFindings: condition.supportingFindings ?? [],
       caveat: condition.caveat,
     })),
     sources: report.sources || [],
@@ -166,7 +166,7 @@ export default function ReportDetails() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = report.file_name || "medical-report.pdf";
+      link.download = report.fileName || "medical-report.pdf";
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -182,7 +182,7 @@ export default function ReportDetails() {
     setActionError("");
     try {
       const updated = await api.renameReport(id, renameValue);
-      setReport((current) => ({ ...current, file_name: updated.file_name || `${renameValue.trim()}.pdf` }));
+      setReport((current) => ({ ...current, fileName: updated.fileName || `${renameValue.trim()}.pdf` }));
       setRenameValue("");
       setIsRenaming(false);
     } catch (error) {
@@ -261,7 +261,7 @@ export default function ReportDetails() {
     date,
     dateOfTest,
     status,
-    file_name: fileName,
+    fileName,
     patientDateOfBirth,
     patientName,
     patientAge,
@@ -272,8 +272,8 @@ export default function ReportDetails() {
     whenToDiscussWithDoctor,
     sources = [],
   } = report;
-  const profileName = user?.fullName || user?.name;
-  const profileDateOfBirth = user?.dateOfBirth || user?.date_of_birth || user?.dob;
+  const profileName = user?.fullName;
+  const profileDateOfBirth = user?.dateOfBirth;
   const displayPatientName = formatPatientName(patientName || profileName);
   const displayPatientAge = formatAge(patientAge || calculateAge(patientDateOfBirth || profileDateOfBirth));
   const displayPatientGender = formatGender(patientGender || user?.gender);
@@ -301,7 +301,7 @@ export default function ReportDetails() {
         Back to reports
           </Link>
           <h1 className="mt-5 font-display text-h1 text-ink">{reportType || "Lab report"}</h1>
-          <p className="mt-1 text-body-sm text-muted">Test date: {displayTestDate || "Not available"}{report.file_name ? ` · ${report.file_name}` : ""}</p>
+          <p className="mt-1 text-body-sm text-muted">Test date: {displayTestDate || "Not available"}{report.fileName ? ` · ${report.fileName}` : ""}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={openRenameDialog} className="rounded-btn border border-border bg-white px-3 py-2 text-body-sm font-medium text-ink hover:border-forest">Rename PDF</button>

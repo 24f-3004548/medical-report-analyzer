@@ -11,7 +11,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
-    report_id: str | None = None
+    report_id: str | None = Field(default=None, validation_alias="reportId")
 
 
 @router.post("")
