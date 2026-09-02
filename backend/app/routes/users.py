@@ -1,4 +1,5 @@
 import os
+from urllib import response
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -48,6 +49,9 @@ def register(data: RegisterRequest):
             "email": data.email,
             "password": data.password,
         })
+        print("SIGNUP USER:", response.user)
+        print("SIGNUP USER ID:", response.user.id if response.user else None)
+        print("SIGNUP SESSION:", response.session)
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -62,6 +66,14 @@ def register(data: RegisterRequest):
 
     user = response.user
 
+    # Supabase returns an obfuscated user with no identities when sign-up is
+    # attempted with an email that already belongs to an account.
+    if user.identities == []:
+        raise HTTPException(
+            status_code=409,
+            detail="Account already exists."
+        )
+
     profile = {
         "id": user.id,
         "name": data.full_name,
@@ -73,9 +85,15 @@ def register(data: RegisterRequest):
     try:
         supabase.table("users").insert(profile).execute()
     except Exception as e:
+        error_message = str(e).lower()
+        if "duplicate key" in error_message or "unique constraint" in error_message:
+            raise HTTPException(
+                status_code=409,
+                detail="Account already exists."
+            )
         raise HTTPException(
             status_code=500,
-            detail=f"Account created but profile could not be saved: {str(e)}"
+            detail="Account created but profile could not be saved."
         )
 
     return {

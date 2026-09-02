@@ -81,13 +81,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {state === "error" && (
-          <div className="rounded-card border border-critical/30 bg-critical-bg px-4 py-3 text-body text-critical">
-            We couldn't load your reports. Please refresh the page.
-          </div>
-        )}
-
-        {state === "success" && reports.length === 0 && (
+        {state !== "loading" && reports.length === 0 && (
           <EmptyState
             title="No reports yet"
             description="Upload your first medical report to get a plain-language explanation of your results."
