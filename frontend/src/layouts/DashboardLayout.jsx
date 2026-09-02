@@ -47,7 +47,7 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-page md:flex">
-      <aside className="hidden md:flex md:w-[220px] md:flex-col md:border-r md:border-border md:bg-white md:px-4 md:py-5">
+      <aside className="hidden md:flex md:w-[220px] md:shrink-0 md:flex-col md:border-r md:border-border md:bg-white md:px-4 md:py-5">
         <NavLink to="/dashboard" aria-label="Veris dashboard" className="px-3">
           <Logo size="sm" />
         </NavLink>

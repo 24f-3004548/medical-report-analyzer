@@ -126,6 +126,12 @@ def login(data: LoginRequest):
         })
     except Exception as error:
         status_code = getattr(error, "status", None) or getattr(error, "status_code", None)
+        error_message = str(error).lower()
+        if "email not confirmed" in error_message or "email_not_confirmed" in error_message:
+            raise HTTPException(
+                status_code=403,
+                detail="Please check your inbox and confirm your email before signing in."
+            )
         if status_code in {400, 401}:
             raise HTTPException(
                 status_code=401,
